@@ -1,0 +1,30 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+.pytest_cache/
+tests/__pycache__/
+
+# Virtual environments
+tests/.venv/
+
+# =========================
+# IDE
+# =========================
+.idea/
+
+# =========================
+# Build artifacts (C++)
+# =========================
+build/
+
+# =========================
+# gRPC / Protobuf generated
+# =========================
+tests/monitor_pb2.py
+tests/monitor_pb2_grpc.py
+
+# =========================
+# Environment variables
+# =========================
+.env
