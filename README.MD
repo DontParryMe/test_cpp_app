@@ -1,4 +1,4 @@
-1. Клонировать проект git@github.com:DontParryMe/test_cpp_app.git
+1. Клонировать проект "git clone git@github.com:DontParryMe/test_cpp_app.git"
 2. Для успешного запуска тестов в системе должен быть установлен python 3.10.12
 3. Сделать файл build.sh исполняемым (sudo chmod +x build.sh)  
 4. Запустить build.sh (./build.sh) для установки всех необходимых зависиморстей и подготовки виртуального окружения для запуска тестов  
