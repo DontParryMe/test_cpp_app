@@ -1,28 +1,41 @@
 #!/usr/bin/env bash
 
-# Проверка версии python3, если нет 3.10.12 сразу падаем (Наличие python именно 3.10.12 полностью гарантирует совместимость тестов)
-PYTHON=$(which python3.10.12 || true)
-
-if [ -z "$PYTHON" ]; then
-  echo "Python 3.10.12 not found"
-  exit 1
-fi
-
-# Останавливаем выполнение при любой ошибке
 set -e
 
-echo "===> Updating packages"
+# =========================
+# Проверка версии Python
+# =========================
+echo "===> Проверка версии Python (>= 3.10.12)"
 
-# Обновляем список пакетов системы
+PYTHON=python3
+
+$PYTHON - << 'EOF'
+import sys
+
+# минимально допустимая версия
+min_version = (3, 10, 12)
+
+# текущая версия интерпретатора
+current = sys.version_info[:3]
+
+print(f"[INFO] Обнаружен Python: {current[0]}.{current[1]}.{current[2]}")
+
+# строгая проверка совместимости
+if current < min_version:
+    raise SystemExit(
+        f"Требуется Python >= 3.10.12, найден {current[0]}.{current[1]}.{current[2]}"
+    )
+EOF
+
+echo "===> Python версия подходит"
+
+# =========================
+# Установка системных зависимостей
+# =========================
+echo "===> Обновление пакетов системы"
 sudo apt update
 
-echo "===> Installing dependencies"
-
-# Устанавливаем системные зависимости:
-# - build-essential: компилятор и базовые инструменты сборки
-# - cmake: система сборки C++
-# - grpc/protobuf: для генерации и работы с gRPC сервисом
-# - boost: может использоваться в C++ проекте
+echo "===> Установка зависимостей"
 sudo apt install -y \
     build-essential \
     cmake \
@@ -33,61 +46,58 @@ sudo apt install -y \
     protobuf-compiler \
     protobuf-compiler-grpc
 
-echo "===> Creating build directory"
-
-# Отдельная директория для сборки
+# =========================
+# Сборка C++ проекта
+# =========================
+echo "===> Создание директории сборки"
 mkdir -p build
 
-echo "===> Running CMake"
-
+echo "===> Запуск CMake"
 cd build
-
-# Генерация make файлов проекта
 cmake ../cpp-application
 
-echo "===> Building project"
-
-# Компиляция проекта с использованием всех ядер CPU
+echo "===> Сборка проекта"
 cmake --build . -j"$(nproc)"
-
-echo "===> Build completed"
-
 cd ..
 
-echo "===> Creating Python virtual environment"
+# =========================
+# Python окружение для тестов
+# =========================
+echo "===> Создание виртуального окружения Python"
 
-# Виртуальное окружение для тестов
 python3 -m venv tests/.venv
-
-# Активация окружения для установки зависимостей
 source tests/.venv/bin/activate
 
-echo "===> Installing Python dependencies"
+echo "===> Установка Python зависимостей"
 
-# Python зависимости:
-# - grpcio: gRPC клиент
-# - pytest: тестовый фреймворк
-# - protobuf: работа с proto-моделями
-# - pydantic: конфигурирование тестового окружения
-pip install grpcio grpcio-tools pytest protobuf pydantic pydantic-settings
+pip install --upgrade pip
 
+pip install \
+    grpcio \
+    grpcio-tools \
+    pytest \
+    protobuf \
+    pydantic \
+    pydantic-settings
+
+# =========================
+# Генерация gRPC stubs
+# =========================
 cd cpp-application
 
-echo "===> Generating gRPC stubs from proto"
+echo "===> Генерация gRPC кода из proto"
 
-# Генерация Python-кода из protobuf описания:
-# - monitor_pb2.py: модели сообщений
-# - monitor_pb2_grpc.py: gRPC клиентский stub
-$PYTHON -m grpc_tools.protoc \
+python3 -m grpc_tools.protoc \
     -I. \
     --python_out=. \
     --grpc_python_out=. \
     monitor.proto
 
-echo "===> Moving generated stubs into tests package"
+echo "===> Перенос сгенерированных файлов в тесты"
 
-# Перенос сгенерированных файлов в тестовый проект
 mv -f monitor_pb2.py ../tests
 mv -f monitor_pb2_grpc.py ../tests
 
-echo "===> Build and test environment ready"
+cd ..
+
+echo "===> Сборка и подготовка окружения завершены успешно"
